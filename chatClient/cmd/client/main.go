@@ -78,10 +78,12 @@ func main() {
 			break
 		}
 		// MSG:<message> — отправка сообщения
-		if strings.HasPrefix(text, "MSG:") && len(text) > 4 {
+		if strings.HasPrefix(text, "MSG:") {
+			fmt.Fprintln(conn, text)
+		} else if strings.HasPrefix(text, "P_MSG:") {
 			fmt.Fprintln(conn, text)
 		} else {
-			fmt.Println("Используйте MSG:<сообщение> для отправки сообщения или QUIT для выхода.")
+			fmt.Println("Используйте MSG:<сообщение>, P_MSG:<кому>:<сообщение> или QUIT.")
 		}
 	}
 

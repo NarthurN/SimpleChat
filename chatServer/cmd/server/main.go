@@ -64,7 +64,21 @@ func (c *Chat) Broadcast(senderName, formattedMessage string) {
 			}
 		}
 	}
+}
 
+func (c *Chat) SendPrivate(sender, recipient, message string) {
+    c.clientsMu.RLock()
+    defer c.clientsMu.RUnlock()
+
+    if client, ok := c.clients[recipient]; ok {
+        formattedMsg := fmt.Sprintf("[private from %s]: %s\n", sender, message)
+        fmt.Fprint(client.Conn, formattedMsg)
+    } else {
+        // Если получатель не найден, сообщаем об этом отправителю
+        if senderClient, ok := c.clients[sender]; ok {
+            fmt.Fprintf(senderClient.Conn, "SERVER: Пользователь '%s' не найден.\n", recipient)
+        }
+    }
 }
 
 func main() {
@@ -169,6 +183,7 @@ func handleClient(conn net.Conn, chat *Chat) {
 
 		switch command {
 		case "MSG":
+			parts := strings.SplitN(trimmedMessage, ":", 2)
 			if len(parts) < 2 || parts[1] == "" {
 				fmt.Fprintln(conn, "ERROR: Неверный формат. Используйте MSG:<message>")
 				continue
@@ -176,6 +191,15 @@ func handleClient(conn net.Conn, chat *Chat) {
 			msgContent := parts[1]
 			fullMessage := fmt.Sprintf("%s: %s", username, msgContent)
 			chat.Broadcast(username, fullMessage)
+		case "P_MSG":
+			parts := strings.SplitN(trimmedMessage, ":", 3)
+			if len(parts) < 3 {
+				fmt.Fprintln(conn, "ERROR: Формат: PRIVATE_MSG:<получатель>:<сообщение>")
+				continue
+			}
+			toUser := parts[1]
+			privateMessage := parts[2]
+			chat.SendPrivate(username, toUser, privateMessage)
 		case "QUIT":
 			return
 		default:

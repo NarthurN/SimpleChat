@@ -4,6 +4,7 @@
 
 - JOIN:<username> - подключение пользователя
 - MSG:<username>:<message> - отправка сообщения
+- P_MSG:<to_username>:<message> - отправка приватного сообшения
 - QUIT:<username> - отключение пользователя
 
 
