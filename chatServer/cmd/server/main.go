@@ -8,15 +8,8 @@ import (
 	"net"
 	"strings"
 	"sync"
-)
 
-// var (
-// 	ErrClientExists = errors.New("client already exists")
-// )
-
-const (
-	serverProtocol = "tcp"
-	serverAddress  = "localhost:8080"
+	"github.com/NarthurN/SimpleChat/shared/settings"
 )
 
 // Client теперь хранит и соединение, и имя пользователя
@@ -79,7 +72,7 @@ func main() {
 	chat := NewChat()
 
 	// Создаем соединение TCP-сервера
-	serverListener, err := net.Listen(serverProtocol, serverAddress)
+	serverListener, err := net.Listen(settings.ServerProtocol, settings.ServerAddress)
 	if err != nil {
 		log.Fatalf("failed to listen: %v\n", err)
 	}
@@ -91,7 +84,7 @@ func main() {
 		}
 	}()
 
-	log.Println("server is listening on", serverAddress)
+	log.Println("server is listening on", settings.ServerAddress)
 
 	// Обрабатываем входящие содинения
 	for {
@@ -167,7 +160,7 @@ func handleClient(conn net.Conn, chat *Chat) {
 		// Игнорируем пустые сообщения
 		trimmedMessage := strings.TrimSpace(message)
 		if trimmedMessage == "" {
-			continue 
+			continue
 		}
 
 		// Парсим команду
