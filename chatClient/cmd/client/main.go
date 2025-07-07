@@ -16,7 +16,7 @@ import (
 func receiveMessages(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	for {
-		msg, err := reader.ReadString('\n')
+		message, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Соединение с сервером закрыто.")
@@ -25,7 +25,38 @@ func receiveMessages(conn net.Conn) {
 			}
 			os.Exit(0)
 		}
-		fmt.Print(msg)
+		// decryptedMessage := settings.SimpleDecrypt(strings.TrimSpace(msg))
+		// fmt.Println(decryptedMessage)
+		trimmedMessage := strings.TrimSpace(message)
+		parts := strings.SplitN(trimmedMessage, ":", 2)
+
+		if len(parts) >= 2 {
+			prefix := parts[0]
+			content := parts[1]
+
+			if strings.HasPrefix(prefix, "[private from") {
+				idx := strings.Index(trimmedMessage, "]:")
+				if idx != -1 {
+					formattedPrefix := trimmedMessage[:idx+2]
+					encryptedContent := trimmedMessage[idx+2:]
+
+					decryptedContent := settings.SimpleDecrypt(encryptedContent)
+					fmt.Printf("%s%s\n", formattedPrefix, decryptedContent)
+				} else {
+					// Если формат не соответствует ожидаемому, выводим как есть
+					fmt.Println(trimmedMessage)
+				}
+			} else if prefix == "SERVER" {
+				fmt.Println(trimmedMessage)
+			} else {
+				// Это обычное сообщение от пользователя, например "Alice: Hello"
+				// Расшифровываем только часть после двоеточия
+				decryptedContent := settings.SimpleDecrypt(content)
+				fmt.Printf("%s:%s\n", prefix, decryptedContent)
+			}
+		} else {
+			fmt.Println(trimmedMessage)
+		}
 	}
 }
 
@@ -64,7 +95,7 @@ func main() {
 	// Запуск приёма сообщений от сервера в отдельной горутине
 	go receiveMessages(conn)
 
-	fmt.Println("Теперь вы можете отправлять сообщения (MSG:<текст>) или команду QUIT для выхода.")
+	fmt.Println("Вы в чате! Используйте MSG:<сообщение>, P_MSG:<кому>:<сообщение> или QUIT.")
 
 	// Основной цикл: чтение команд и сообщений с консоли и отправка на сервер
 	for scanner.Scan() {
@@ -77,11 +108,25 @@ func main() {
 			fmt.Fprintln(conn, "QUIT")
 			break
 		}
-		// MSG:<message> — отправка сообщения
+
 		if strings.HasPrefix(text, "MSG:") {
-			fmt.Fprintln(conn, text)
+			parts := strings.SplitN(text, ":", 2)
+			if len(parts) == 2 {
+				encryptedContent := settings.SimpleEncrypt(parts[1])
+				fmt.Fprintf(conn, "MSG:%s\n", encryptedContent)
+			} else {
+				fmt.Println("Неверный формат MSG. Используйте MSG:<сообщение>")
+			}
 		} else if strings.HasPrefix(text, "P_MSG:") {
-			fmt.Fprintln(conn, text)
+			parts := strings.SplitN(text, ":", 3)
+			if len(parts) == 3 {
+				recipient := parts[1]
+				messageContent := parts[2]
+				encryptedMessage := settings.SimpleEncrypt(messageContent)
+				fmt.Fprintf(conn, "P_MSG:%s:%s\n", recipient, encryptedMessage)
+			} else {
+				fmt.Println("Неверный формат P_MSG. Используйте P_MSG:<кому>:<сообщение>")
+			}
 		} else {
 			fmt.Println("Используйте MSG:<сообщение>, P_MSG:<кому>:<сообщение> или QUIT.")
 		}
