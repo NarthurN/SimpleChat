@@ -1,0 +1,43 @@
+name: Update Coverage Badge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Install gobadge
+        run: go install github.com/AlexBeauchemin/gobadge@latest
+
+      - name: Run tests and generate coverage profiles for all modules
+        run: |
+          go test ./chatServer/... -coverprofile=server.out
+          go test ./chatClient/... -coverprofile=client.out
+          go test ./shared/... -coverprofile=shared.out
+
+      - name: Combine coverage profiles
+        run: |
+          echo "mode: set" > coverage.out
+          tail -n +2 server.out >> coverage.out
+          tail -n +2 client.out >> coverage.out
+          tail -n +2 shared.out >> coverage.out
+
+      - name: Update badge in README.md
+        run: gobadge -filename=coverage.out
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: update coverage badge"
+          file_pattern: "README.md"
